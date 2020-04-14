@@ -6,6 +6,7 @@
   * @date    28.02.2020
   * @brief	 Modu³ kontrolera zapewniaj¹cy sterowanie silnikami.
   * @note 	 Obecnie obs³ógiwany jest tylko tryb sterowania PWM
+  *
   ******************************************************************************
   */
 
