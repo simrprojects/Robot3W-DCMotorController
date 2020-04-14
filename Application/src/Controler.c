@@ -149,8 +149,8 @@ void UartCommunication_NewFrame(unsigned char frameId, char* data,int size){
 	case 3://sterowanie napiêciem silnika A i B
 		if(size>=2){
 			signed char a,b;
-			a = &(signed char*)&data[0];
-			b = &(signed char*)&data[1];
+			a = (*(signed char*)&data[0]);
+			b = *(signed char*)&data[1];
 			if(a>100){
 				a = 100;
 			}else if(a<-100){

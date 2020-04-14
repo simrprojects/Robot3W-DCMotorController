@@ -1,6 +1,6 @@
-Controler.c:64:6:ControlerTask	24	static
-Controler.c:38:6:Controler_Init	16	static
-Controler.c:110:6:UartCommunication_NewFrame	16	static
-Controler.c:132:6:Controler_SendFrame	24	static
-Controler.c:91:6:ControlerSpervisorTask	16	static
-Controler.c:145:6:TIM7_IRQHandler	16	static
+Controler.c:71:6:ControlerTask	32	static
+Controler.c:45:6:Controler_Init	16	static
+Controler.c:134:6:UartCommunication_NewFrame	16	static
+Controler.c:178:6:Controler_SendFrame	24	static
+Controler.c:112:6:ControlerSpervisorTask	16	static
+Controler.c:191:6:TIM7_IRQHandler	16	static
