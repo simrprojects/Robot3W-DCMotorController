@@ -1,6 +1,6 @@
-UartCommunication.c:138:6:HAL_UART_RxCpltCallback	16	static
-UartCommunication.c:53:6:UartCommunication_Init	16	static
-UartCommunication.c:63:6:UartCommunication_Send	16	static
-UartCommunication.c:130:13:UartCommunication_NewFrame	0	static
-UartCommunication.c:80:6:UartCommunication_Thread	32	static
-UartCommunication.c:152:6:USART2_IRQHandler	8	static
+UartCommunication.c:139:6:HAL_UART_RxCpltCallback	16	static
+UartCommunication.c:54:6:UartCommunication_Init	16	static
+UartCommunication.c:64:6:UartCommunication_Send	16	static
+UartCommunication.c:131:13:UartCommunication_NewFrame	0	static
+UartCommunication.c:81:6:UartCommunication_Thread	32	static
+UartCommunication.c:153:6:USART2_IRQHandler	8	static

@@ -16,6 +16,7 @@
 #include "queue.h"
 #include "task.h"
 #include "UartCommunication.h"
+#include "L6206.h"
 /* Private typedef -----------------------------------------------------------*/
 typedef struct{
 	xQueueHandle motorAqueue;

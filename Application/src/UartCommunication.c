@@ -27,6 +27,7 @@
 #include "queue.h"
 #include "UartCommunication.h"
 #include "string.h"
+#include "stdio.h"
 /* Private typedef -----------------------------------------------------------*/
 #define UART_RX_BUFF_SIZE	64
 #define UART_TX_BUFF_SIZE	32
