@@ -42,6 +42,8 @@ typedef struct{
 tUartCommunication uart;
 /* Private function prototypes -----------------------------------------------*/
 void UartCommunication_Thread(void* ptrt);
+extern uint32_t ITM_SendChar (uint32_t ch);
+
 /* Public  functions ---------------------------------------------------------*/
 /**
   * @brief Modu³ odpowiedzialny za komunikacjê
@@ -108,6 +110,7 @@ void UartCommunication_Thread(void* ptrt){
 				}else{
 					//crc
 					if(rx==0xAA){
+						printf("UC: New frame; id:%d, size:%d\n\r",uart.rxBuf[0],size-1);
 						UartCommunication_NewFrame(uart.rxBuf[0],(char*)&uart.rxBuf[1],size-1);
 					}
 					state=0;
@@ -136,6 +139,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	BaseType_t xHigherPriorityTaskWokenByPost=pdFALSE;
 	unsigned char rx=USART2->RDR;
 	xQueueSendFromISR(uart.queue,&rx,&xHigherPriorityTaskWokenByPost);
+	ITM_SendChar(rx);
 	if( xHigherPriorityTaskWokenByPost ){
 		taskYIELD();
 	}
