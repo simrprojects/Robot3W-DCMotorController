@@ -157,7 +157,6 @@ void MX_FREERTOS_Init(void) {
   * @retval None
   */
 /* USER CODE END Header_StartDefaultTask */
-volatile unsigned int power;
 void StartDefaultTask(void const * argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
@@ -171,7 +170,7 @@ void StartDefaultTask(void const * argument)
 
 
 
-	for(int i=-250;i<250;i+=1){
+/*	for(int i=-250;i<250;i+=1){
 		osDelay(20);
 		L6206_setDuty(i,i);
 	}
@@ -183,7 +182,8 @@ void StartDefaultTask(void const * argument)
 	while(1){
 		L6206_setDuty(power,power);
 		osDelay(200);
-	}
+	}*/
+	osDelay(1000);
 
   }
   /* USER CODE END StartDefaultTask */

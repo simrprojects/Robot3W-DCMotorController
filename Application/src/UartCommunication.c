@@ -29,6 +29,9 @@
 #include "string.h"
 #include "stdio.h"
 /* Private typedef -----------------------------------------------------------*/
+#define USART	USART1
+#define HUART	huart1
+
 #define UART_RX_BUFF_SIZE	64
 #define UART_TX_BUFF_SIZE	32
 
@@ -53,7 +56,7 @@ extern uint32_t ITM_SendChar (uint32_t ch);
   */
 void UartCommunication_Init(void){
 	uart.queue=xQueueCreate(10,1);
-	huart2.RxISR=HAL_UART_RxCpltCallback;
+	HUART.RxISR=HAL_UART_RxCpltCallback;
 	xTaskCreate(UartCommunication_Thread,"uart",250,0,2,0);
 }
 /**
@@ -69,7 +72,7 @@ void UartCommunication_Send(unsigned char id,void*data, int size){
 		uart.txBuf[3]=id;
 		memcpy(&uart.txBuf[4],data,size);
 		uart.txBuf[4+size]=0xAA;
-		HAL_UART_Transmit_IT(&huart2,uart.txBuf,size+5);
+		HAL_UART_Transmit_IT(&HUART,uart.txBuf,size+5);
 	}
 }
 /* Private functions ---------------------------------------------------------*/
@@ -82,7 +85,7 @@ void UartCommunication_Thread(void* ptrt){
 	unsigned int state=0;
 	unsigned char rx,size,ptr;
 	//aktywuje przerwanie odbiorcze uart
-	SET_BIT(USART2->CR1, USART_CR1_RXNEIE);
+	SET_BIT(USART->CR1, USART_CR1_RXNEIE);
 
 	while(1){
 		if(xQueueReceive(uart.queue,&rx,50)==pdTRUE){
@@ -138,7 +141,7 @@ __weak void UartCommunication_NewFrame(unsigned char frameId, char* data,int siz
   */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	BaseType_t xHigherPriorityTaskWokenByPost=pdFALSE;
-	unsigned char rx=USART2->RDR;
+	unsigned char rx=huart->Instance->RDR;
 	xQueueSendFromISR(uart.queue,&rx,&xHigherPriorityTaskWokenByPost);
 	ITM_SendChar(rx);
 	if( xHigherPriorityTaskWokenByPost ){
@@ -150,13 +153,9 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
   * @param[in]  None
   * @retval None
   */
-void USART2_IRQHandler(void)
+/*void USART2_IRQHandler(void)
 {
-  /* USER CODE BEGIN USART2_IRQn 0 */
 
-  /* USER CODE END USART2_IRQn 0 */
   HAL_UART_IRQHandler(&huart2);
-  /* USER CODE BEGIN USART2_IRQn 1 */
 
-  /* USER CODE END USART2_IRQn 1 */
-}
+}*/

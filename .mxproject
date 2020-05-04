@@ -1,7 +1,7 @@
 [PreviousGenFiles]
-HeaderPath=C:/Projekty/RobotTrujkolowy/DCMotrControlerF303/Inc
+HeaderPath=C:/Projekty/RobotTrujkolowy/Robot3W-DCMotorController/Inc
 HeaderFiles=gpio.h;adc.h;dma.h;FreeRTOSConfig.h;tim.h;usart.h;stm32f3xx_it.h;stm32f3xx_hal_conf.h;main.h;
-SourcePath=C:/Projekty/RobotTrujkolowy/DCMotrControlerF303/Src
+SourcePath=C:/Projekty/RobotTrujkolowy/Robot3W-DCMotorController/Src
 SourceFiles=gpio.c;adc.c;dma.c;freertos.c;tim.c;usart.c;stm32f3xx_it.c;stm32f3xx_hal_msp.c;stm32f3xx_hal_timebase_tim.c;main.c;
 
 [PreviousLibFiles]

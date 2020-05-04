@@ -1,4 +1,4 @@
-freertos.c:161:6:StartDefaultTask	8	static
+freertos.c:160:6:StartDefaultTask	8	static
 freertos.c:75:13:vApplicationMallocFailedHook	0	static
 freertos.c:94:6:vApplicationGetIdleTaskMemory	0	static
 freertos.c:107:6:vApplicationGetTimerTaskMemory	0	static
