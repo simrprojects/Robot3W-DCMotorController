@@ -17,11 +17,38 @@
 #include "task.h"
 #include "UartCommunication.h"
 #include "L6206.h"
+#include "LinearModules.h"
+#include "math.h"
 /* Private typedef -----------------------------------------------------------*/
+typedef struct{
+	float kp;//wzmocneinei proporcjonalne
+	float ki;//wzmocnienei ca³kuj¹ce
+	float kff;//wzmocnienei do przodu
+	float kv;//wsp. rpm/v
+	float u;//napiêcie zasilania
+	float u_max;//limit napiecia silnika
+	unsigned int revers;
+	float tp;//okres regulacji
+	float rpm_max;
+}tPIDCfg;
+typedef struct{
+	float kp;//wzmocneinei proporcjonalne
+	float ki;//wzmocnienei ca³kuj¹ce
+	float kff;//wzmocnienei do przodu
+	signed int saturation;
+	float kv;//wsp. rpm/v
+	float u;//napiêcie zasilania
+	float u_max;//limit napiecia silnika
+	float rpm_max;
+	unsigned int revers;//praca silnika w rewersie
+	tIntegrator integrator;
+}tRpmControler;
 typedef struct{
 	xQueueHandle motorAqueue;
 	xQueueHandle nweUartFrame;
 	xQueueHandle motorqueue;
+	tRpmControler aPID;
+	tRpmControler bPID;
 	float sp_rpm_a;
 	float sp_rpm_b;
 	float rpm_a;
@@ -42,6 +69,8 @@ tControler controler;
 void ControlerTask(void* ptr);
 void ControlerSpervisorTask(void* ptr);
 void Controler_SendFrame(void);
+int Controler_RPMcontrolerExecute(tRpmControler *rc,float rpm_sp,float rpm_cv);
+int Controler_RPMcontrolerInit(tRpmControler *rc,tPIDCfg *cfg);
 /* Public  functions ---------------------------------------------------------*/
 void Controler_Init(void){
 	//inicjuje pracê enkoderów
@@ -54,12 +83,33 @@ void Controler_Init(void){
 	controler.motorqueue = xQueueCreate(10,4);
 	controler.nweUartFrame = xQueueCreate(10,1);
 	//controler.motorBqueue = xQueueCreate(10,2);
+	//inicjujê parametry kontrolera
+	tPIDCfg cfg;
+	cfg.kff=0.4;
+	cfg.kp=5.;
+	cfg.ki=10.;
+	cfg.kv=21.67;//rpm/V
+	cfg.revers=0;
+	cfg.tp=0.01;
+	cfg.u=7.3;
+	cfg.u_max=6;
+	cfg.rpm_max=130;
+	Controler_RPMcontrolerInit(&controler.aPID,&cfg);
+	cfg.revers=1;
+	Controler_RPMcontrolerInit(&controler.bPID,&cfg);
+
+	controler.flags.rpm_pid_ctrl_enable=1;
+	controler.sp_rpm_a=0;
+	controler.sp_rpm_b=0;
+	controler.sp_pwm_a=0;
+	controler.sp_pwm_b=0;
+	L6206_enable(1,1);
 	//inicjuje w¹tek kontroler
 	xTaskCreate(ControlerTask,"controler",500,0,5,0);
 	xTaskCreate(ControlerSpervisorTask,"ctrl_sup",250,0,2,0);
 	HAL_TIM_Base_Start_IT(&htim7);
 	//inicjuej modu³ komunikacyjny
-	UartCommunication_Init();
+//	UartCommunication_Init();
 }
 /* Private functions ---------------------------------------------------------*/
 /**
@@ -81,21 +131,32 @@ void ControlerTask(void* ptr){
 			enc_a=encoder&0xFFFF;
 			enc_b=(encoder>>16)&0xFFFF;
 			//obliczenia dla ko³a A
-			dEnc = (signed int)enc_a-(signed int)last_enc_a;
+			dEnc = (signed int)((signed int)enc_a-(signed int)last_enc_a);
+			if(dEnc>(65536/2)){
+				dEnc=dEnc-65536;
+			}else if(dEnc<-(65536/2)){
+				dEnc = 65536+dEnc;
+			}
 			last_enc_a=enc_a;
 			rpm = (float)dEnc*/*(100*60/24/75)*/3.33333333;
-			rpm_a = rpm;
-			controler.rpm_a=rpm;
+			controler.rpm_a+=(rpm-controler.rpm_a)*0.4;
 			//obliczenia dla ko³a B
 			dEnc = (signed int)enc_b-(signed int)last_enc_b;
+			if(dEnc>(65536/2)){
+				dEnc=dEnc-65536;
+			}else if(dEnc<-(65536/2)){
+				dEnc = 65536+dEnc;
+			}
 			last_enc_b=enc_b;
 			rpm = (float)dEnc*/*(100*60/24/75)*/3.33333333;
-
-			controler.rpm_b=rpm;
+			controler.rpm_b+=(rpm-controler.rpm_b)*0.4;
 			controler.encoder_a=enc_a;
 			controler.encoder_b=enc_b;
 			if(controler.flags.rpm_pid_ctrl_enable){
 				//sterowanie prêdkosci¹ obrotow¹ silników
+				controler.sp_pwm_a=Controler_RPMcontrolerExecute(&controler.aPID,controler.sp_rpm_a,controler.rpm_a);
+				controler.sp_pwm_b=Controler_RPMcontrolerExecute(&controler.bPID,controler.sp_rpm_b,controler.rpm_b);
+				L6206_setDuty(controler.sp_pwm_a,controler.sp_pwm_b);
 			}else{
 				//bezpoœrednie sterowanie PWM
 				L6206_setDuty(controler.sp_pwm_a,controler.sp_pwm_b);
@@ -120,11 +181,11 @@ void ControlerSpervisorTask(void* ptr){
 			L6206_enable(1,1);
 		}else{
 			//pzekroczono timeout, wylaczam silniki
-			controler.sp_rpm_a=0;
-			controler.sp_rpm_b=0;
-			L6206_enable(0,0);
+			//controler.sp_rpm_a=0;
+			//controler.sp_rpm_b=0;
+			//L6206_enable(0,0);
 		}
-		Controler_SendFrame();
+		//Controler_SendFrame();
 	}
 }
 /**
@@ -183,6 +244,61 @@ void Controler_SendFrame(void){
 	*(short*)&data[8]=*(short*)&controler.encoder_a;
 	*(short*)&data[10]=*(short*)&controler.encoder_b;
 	UartCommunication_Send(2,data,12);
+}
+/**
+  * @brief	Funkcja kontrolera prêdkoœci wykonuje pojedynczy cykl obliczeniowy
+  * @param[in]  None
+  * @retval None
+  */
+int Controler_RPMcontrolerExecute(tRpmControler *rc,float rpm_sp,float rpm_cv){
+	float cv_ff;
+	//ograniczam sterowanie
+	if(fabs(rpm_sp)>rc->rpm_max){
+		rpm_sp = rpm_sp/fabs(rpm_sp)*rc->rpm_max;
+	}
+	//odwrócenie kierunku obrotów
+	if(rc->revers){
+		rpm_sp=-rpm_sp;
+		rpm_cv=-rpm_cv;
+	}
+	//wyzcznaczam sk³¹dow¹ sterowania od feedforward
+	cv_ff = rpm_sp*rc->kff/rc->kv;
+	//wyznaczam odchy³kê
+	float e = rpm_sp-rpm_cv;
+	float cv_pid = (rc->kp*e+Integrator_Execute(&rc->integrator,rc->saturation,e)*rc->ki)/rc->kv;
+	//wyznaczam ca³kowite napiêcie sterowania
+	float u = cv_ff+cv_pid;
+	//sprawdzam limity napiêcia sterowania
+	if(u>rc->u_max){
+		u=rc->u_max;
+		rc->saturation=1;
+	}else if(u<-rc->u_max){
+		u=-rc->u_max;
+		rc->saturation=-1;
+	}else{
+		rc->saturation=0;
+	}
+	//przeliczam na sterownaie PWM w zakresie +-1000
+	return 1000*u/rc->u;
+}
+/**
+  * @brief Funkcja inicjuje kontroler prêdkoœci
+  * @param[in]  None
+  * @retval None
+  */
+int Controler_RPMcontrolerInit(tRpmControler *rc,tPIDCfg *cfg){
+	//inicjuje parametry
+	Integrator_SetTime(&rc->integrator,cfg->tp);
+	rc->saturation=0;
+	rc->kff=cfg->kff;
+	rc->ki=cfg->ki;
+	rc->kp=cfg->kp;
+	rc->kv=cfg->kv;
+	rc->revers=cfg->revers;
+	rc->rpm_max=cfg->rpm_max;
+	rc->u=cfg->u;
+	rc->u_max=cfg->u_max;
+	return 0;
 }
 /**
   * @brief Przerwanie od licznika synchronizuj¹cego
